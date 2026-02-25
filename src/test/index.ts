@@ -1,6 +1,9 @@
 import {Client, Events, GatewayIntentBits} from "discord.js";
 import dotenv from "dotenv"
 dotenv.config();
+import { ModuleManager } from "../index";
+import { AutoModule } from "./AutoModule";
+import {MusicMultiModule} from "./Music/MusicMultiModule";
 
 const client = new Client({
     intents: [
@@ -11,13 +14,18 @@ const client = new Client({
     ],
 });
 
-import { ModuleManager } from "../index";
-import { AutoModule } from "./AutoModule";
+client.on(Events.InteractionCreate, async (interaction) => {
+    if(interaction.isButton()){
+        console.log(interaction.customId)
+    }
+})
 
 client.once(Events.ClientReady, () => {
     const manager = new ModuleManager(client);
+    manager.register(new MusicMultiModule(client))
     manager.register(new AutoModule());
     manager.enableAll();
+    manager.sendUIToChannel("1162047096220827831")
 
     console.log("Bot ready!")
 });
