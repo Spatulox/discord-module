@@ -1,24 +1,23 @@
 import { ModuleManager } from './ModuleManager.js';
 import {
     ButtonInteraction,
-    Client,
-    ContainerBuilder,
+    ContainerBuilder, InteractionReplyOptions, MessageFlags,
 } from 'discord.js';
 import {Module, ModuleEventsMap} from "./Module";
 
 export abstract class MultiModule extends Module {
     private readonly manager;
 
-    protected abstract get subModules(): Module[];
+    public abstract get subModules(): Module[];
 
-    constructor(client: Client) {
+    constructor() {
         super()
-        this.manager = new ModuleManager(client)
-    }
-
-    register(module: Module) {
-        this.subModules.push(module);
-        this.manager.register(module);
+        const inst = ModuleManager.getInstance()
+        if(inst){
+            this.manager = inst
+        } else {
+            throw new Error("Module Manager Instance is null")
+        }
     }
 
     public get events(): ModuleEventsMap {
@@ -35,6 +34,13 @@ export abstract class MultiModule extends Module {
         }
 
         return container;
+    }
+
+    override showModule(): InteractionReplyOptions{
+        return {
+            components: [this.createSubmoduleUI()],
+            flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral],
+        }
     }
 
 
@@ -58,21 +64,14 @@ export abstract class MultiModule extends Module {
         this.notifyChange(interaction);
     }
 
-    toggleSubModule(subModuleName: string, interaction?: ButtonInteraction) {
-        const module = this.manager.getModule(subModuleName);
-        if (module) {
-            this.toogleEnabled()
-            this.notifyChange(interaction);
-        }
-    }
-
-    // 📤 Notif UI unifiée
     private notifyChange(interaction?: ButtonInteraction) {
         if (!interaction) return;
 
+        const flatModules = Object.values(this.manager.modules).flat();
+
         interaction.update({
             embeds: [{
-                title: `${this.name} (${this.manager.modules.filter(m => m.enabled).length}/${this.subModules.length})`,
+                title: `${this.name} (${flatModules.filter(m => m.enabled).length}/${this.subModules.length})`,
                 color: this.isAnyEnabled() ? 0x00ff00 : 0xff0000
             }],
             components: [this.createSubmoduleUI()]
@@ -80,6 +79,7 @@ export abstract class MultiModule extends Module {
     }
 
     private isAnyEnabled(): boolean {
-        return this.manager.modules.some(m => m.enabled);
+        return Object.values(this.manager.modules).flat().some(m => m.enabled);
     }
+
 }

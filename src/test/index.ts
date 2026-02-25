@@ -21,8 +21,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 })
 
 client.once(Events.ClientReady, () => {
-    const manager = new ModuleManager(client);
-    manager.register(new MusicMultiModule(client))
+    const manager = ModuleManager.createInstance(client);
+    manager.register(new MusicMultiModule())
     manager.register(new AutoModule());
     manager.enableAll();
     manager.sendUIToChannel("1162047096220827831")

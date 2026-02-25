@@ -6,11 +6,10 @@ export class MusicMultiModule extends MultiModule {
     name = "Music";
     description = "🎵 Système de musique complet";
 
-    protected get subModules(): Module[] {
+    public get subModules(): Module[] {
         return [
             new PlayModule(),
             new VolumeModule(),
         ];
     }
-
 }
