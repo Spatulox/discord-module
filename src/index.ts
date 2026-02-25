@@ -1,1 +1,2 @@
-console.log('Happy developing ✨')
+export {Module} from "./code/Module";
+export {ModuleManager} from "./code/ModuleManager";
