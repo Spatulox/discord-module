@@ -1,6 +1,6 @@
 import {
     Client,
-    ContainerBuilder,
+    ContainerBuilder, Message, MessageEditOptions,
     MessageFlags, SeparatorBuilder, SeparatorSpacingSize,
     TextDisplayBuilder
 } from "discord.js";
@@ -13,6 +13,7 @@ export class ModuleManager {
     private _modules: ModuleMap = {};
     private client: Client | null;
     private static instance: ModuleManager | null;
+    private static message: Message | null = null;
 
     private constructor(client: Client) {
         this.client = client;
@@ -39,7 +40,6 @@ export class ModuleManager {
             return
         }
         this.registerMod("root", module);
-        //console.log(this.modules);
     }
 
     private registerMod(parentName: string | "root", module: Module): void {
@@ -65,7 +65,6 @@ export class ModuleManager {
     }
 
     private bindEvents(module: Module) {
-        //console.log(module);
         const eventsMap = module.events;
 
         for (const [eventName, method] of Object.entries(eventsMap)) {
@@ -109,12 +108,19 @@ export class ModuleManager {
             throw new Error(`Channel (${channelID}) does not exist or is unavailable`);
         }
         if(channel.isTextBased() && channel.isSendable()){
-            channel.send({
+            ModuleManager.message = await channel.send({
                 components: [this.createManagerUI()],
                 flags: MessageFlags.IsComponentsV2
             })
             return
         }
         throw new Error(`Channel (${channelID}) does not exist or is not a valid sendable channel`);
+    }
+
+    async updateUI(): Promise<void> {
+        const m: MessageEditOptions = {
+            components: [this.createManagerUI()],
+        }
+        await ModuleManager.message?.edit(m)
     }
 }
