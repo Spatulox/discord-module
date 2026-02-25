@@ -1,5 +1,5 @@
 import {Module} from "../index";
-import {Events, Guild, Interaction, Message} from "discord.js";
+import {Events, Guild, Interaction} from "discord.js";
 
 export class AutoModule extends Module {
     name = "AutoMapped";
@@ -7,16 +7,9 @@ export class AutoModule extends Module {
 
     public get events() {
         return {
-            [Events.MessageCreate]: this.handleMessage,
             [Events.InteractionCreate]: this.handleInteraction,
             [Events.GuildCreate]: this.onGuildJoin
         };
-    }
-
-    public async handleMessage(message: Message) {
-        if (message.content === '!ping') {
-            message.reply('Pong!');
-        }
     }
 
     public handleInteraction(interaction: Interaction) {
