@@ -24,6 +24,7 @@ client.once(Events.ClientReady, () => {
     const manager = ModuleManager.createInstance(client);
     manager.register(new MusicMultiModule())
     manager.register(new AutoModule());
+    manager.register(new PongModule());
     manager.enableAll();
     manager.sendUIToChannel("1162047096220827831")
 
