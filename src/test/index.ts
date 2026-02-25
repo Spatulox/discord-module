@@ -1,9 +1,10 @@
 import {Client, Events, GatewayIntentBits} from "discord.js";
 import dotenv from "dotenv"
 dotenv.config();
-import { ModuleManager } from "../index";
+import {Module, ModuleManager, MultiModule} from "../index";
 import { AutoModule } from "./AutoModule";
 import {MusicMultiModule} from "./Music/MusicMultiModule";
+import {PongModule} from "./PongModule";
 
 const client = new Client({
     intents: [
@@ -16,7 +17,21 @@ const client = new Client({
 
 client.on(Events.InteractionCreate, async (interaction) => {
     if(interaction.isButton()){
-        console.log(interaction.customId)
+        const custID = interaction.customId
+        if(custID.startsWith("toggle_")){
+            console.log(interaction.customId)
+            const manager = ModuleManager.getInstance()
+            const module = manager?.getModule(custID.split("toggle_")[1]!)
+            console.log(module)
+
+            if(module instanceof MultiModule){
+                interaction.reply(module.showModule()) // This show all the modules inside the MultiModule.
+            } else if (module instanceof Module){
+                module.enabled ? module.disable() : module.enable()
+                // Faut pouvoir update l'interaction d'où vient le truc, mais faut réussi à récupérer le message d'ou vient l'interaction / le niveau de modules
+                // If we use the module.showModule(), this will only show the actual module, which is completely useless
+            }
+        }
     }
 })
 
