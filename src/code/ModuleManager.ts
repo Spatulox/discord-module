@@ -1,15 +1,34 @@
-import {Client} from "discord.js";
+import {
+    Client,
+    ContainerBuilder,
+    MessageFlags,
+    TextDisplayBuilder
+} from "discord.js";
 import {Module} from './Module';
 
 export class ModuleManager {
-    private modules: Module[] = [];
+    private _modules: Module[] = [];
 
-    constructor(private client: Client) {
-    }
+    constructor(private client: Client) {}
+
+    get modules(): Module[] { return this._modules; }
 
     register(module: Module) {
-        this.modules.push(module);
+        this._modules.push(module);
         this.bindEvents(module);
+    }
+
+    private createManagerUI(): ContainerBuilder {
+        const container = new ContainerBuilder()
+        container
+            .addTextDisplayComponents(new TextDisplayBuilder().setContent(`# Module Manager`))
+            .addTextDisplayComponents(new TextDisplayBuilder().setContent(`You can enable/disable any module`))
+
+        for (const module of this._modules) {
+            container.addSectionComponents(module.createModuleUI())
+        }
+
+        return container;
     }
 
     private bindEvents(module: Module) {
@@ -27,14 +46,29 @@ export class ModuleManager {
     }
 
     enableAll() {
-        this.modules.forEach(mod => mod.enable());
+        this._modules.forEach(mod => mod.enable());
     }
 
     disableAll() {
-        this.modules.forEach(mod => mod.disable());
+        this._modules.forEach(mod => mod.disable());
     }
 
     getModule(name: string) {
-        return this.modules.find(m => m.name === name);
+        return this._modules.find(m => m.name === name);
+    }
+
+    async sendUIToChannel(channelID: string){
+        const channel = this.client.channels.cache.get(channelID) || await this.client.channels.fetch(channelID)
+        if(!channel){
+            throw new Error(`Channel (${channelID}) does not exist or is unavailable`);
+        }
+        if(channel.isTextBased() && channel.isSendable()){
+            channel.send({
+                components: [this.createManagerUI()],
+                flags: MessageFlags.IsComponentsV2
+            })
+            return
+        }
+        throw new Error(`Channel (${channelID}) does not exist or is not a valid sendable channel`);
     }
 }
