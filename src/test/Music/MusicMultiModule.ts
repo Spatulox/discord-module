@@ -3,13 +3,11 @@ import {PlayModule} from "./PlayModule";
 import {VolumeModule} from "./VolumeModule";
 
 export class MusicMultiModule extends MultiModule {
-    name = "Music";
+    name = "Music Multi Module";
     description = "🎵 Système de musique complet";
 
-    public get subModules(): Module[] {
-        return [
-            new PlayModule(),
-            new VolumeModule(),
-        ];
-    }
+    public subModules: Module[] = [
+        new PlayModule(),
+        new VolumeModule(),
+    ];
 }

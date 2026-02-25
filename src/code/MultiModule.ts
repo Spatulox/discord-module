@@ -8,7 +8,11 @@ import {Module, ModuleEventsMap} from "./Module";
 export abstract class MultiModule extends Module {
     private readonly manager;
 
-    public abstract get subModules(): Module[];
+    protected abstract readonly subModules: Module[];
+
+    /*public get subModules(): Module[] {
+        return this._subModules;
+    };*/
 
     constructor() {
         super()
