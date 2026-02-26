@@ -7,7 +7,13 @@ import {
     TextDisplayBuilder
 } from 'discord.js';
 
-export type ModuleEventsMap = Partial<Record<keyof ClientEvents, (...args: any[]) => any>>;
+//export type ModuleEventsMap = Partial<Record<keyof ClientEvents, (...args: any[]) => any>>;
+
+type ModuleEventHandler =
+    | ((...args: any[]) => any)
+    | ((...args: any[]) => any)[];
+
+export type ModuleEventsMap = Partial<Record<keyof ClientEvents, ModuleEventHandler>>;
 
 export abstract class Module     {
     private _parent: string | "root" = "root";

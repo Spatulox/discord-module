@@ -77,13 +77,25 @@ export class ModuleManager {
         const eventsMap = module.events;
 
         for (const [eventName, method] of Object.entries(eventsMap)) {
-            if (typeof method !== 'function') continue;
             // ✅ Automatic Binding
-            this.client?.on(eventName, async (...args: any[]) => {
-                if (module.enabled) {
-                    await method(...args);
+            if (typeof method === 'function') {
+                this.client?.on(eventName, async (...args: any[]) => {
+                    if (module.enabled) {
+                        await method(...args);
+                    }
+                });
+            } else if (Array.isArray(method)) {
+                // Tableau de fonctions
+                for (const handler of method) {
+                    if (typeof handler === 'function') {
+                        this.client?.on(eventName, async (...args: any[]) => {
+                            if (module.enabled) {
+                                await handler(...args);
+                            }
+                        });
+                    }
                 }
-            });
+            }
         }
     }
 
