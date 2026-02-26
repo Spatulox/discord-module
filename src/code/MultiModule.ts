@@ -1,7 +1,7 @@
 import { ModuleManager } from './ModuleManager.js';
 import {
     ButtonInteraction,
-    ContainerBuilder, InteractionReplyOptions, MessageFlags,
+    ContainerBuilder, InteractionReplyOptions, MessageFlags, SeparatorBuilder, SeparatorSpacingSize,
 } from 'discord.js';
 import {Module, ModuleEventsMap} from "./Module";
 
@@ -27,6 +27,8 @@ export abstract class MultiModule extends Module {
         const container = new ContainerBuilder();
 
         container.addSectionComponents(this.createModuleUI("all"))
+
+        container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large).setDivider(true))
 
         for (const module of this.subModules) {
             container.addSectionComponents(module.createModuleUI())
