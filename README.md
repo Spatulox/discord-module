@@ -18,36 +18,42 @@ Transformez votre bot Discord en modules indépendants activables/désactivables
 
     Discordjs : Always up to date and completely compatible
 
-```ts
-const manager = new ModuleManager(client);
-manager.register(new MusicModule(client));
-manager.register(new AdminModule(client));
-manager.enableAll();
-```
-
 ## 🎮 Utilisation (2 minutes)
 1. Module exemple
 ```ts
-export class MusicModule extends Module {
-    name = "Music";
+    export class PongModule extends Module {
+        public name: string = "Pong Module";
+        public description: string = "Reply with pong";
+        public get events(): ModuleEventsMap {
+            return {
+                [Events.MessageCreate]: this.handleMessage,
+                [Events.MessageUpdate]: [this.handleMessageUpdate1, this.handleMessageUpdate2],
+            }
+        }
     
-    async playSong(interaction: Interaction) {
-        interaction.reply("🎵 Musique démarrée !");
-    }
+        async handleMessage(message: Message) {
+            if(message.content == "!ping") {
+                message.reply("Pong !")
+            }
+        }
     
-    public get events() {
-        return {
-            interactionCreate: this.playSong  // ✅ Auto-bind !
-        };
+        async handleMessageUpdate1(message: Message) {
+            message.reply("Update 1 !")
+        }
+    
+        async handleMessageUpdate2(message: Message) {
+            message.reply("Update 2 !")
+        }
+    
     }
-}
 ```
 2. Bot principal
 ```ts
 client.once(Events.ClientReady, () => {
-const manager = new ModuleManager(client);
-manager.register(new MusicModule(client));
-manager.enableAll(); // 🎉 Tout marche !
+    const manager = ModuleManager.createInstance(client); // ModuleManager is a singleton
+    manager.register(new PongModule(client)); // You can register a Module or a MultiModule (Menu for Module)
+    manager.enableAll(); // By default, a Module is disable
+    manager.sendUIToChannel("channelID") // Optionnal, only if you want to dynamically toggle modules
 });
 ```
 
