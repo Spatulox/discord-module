@@ -33,12 +33,16 @@ export class ModuleManager {
 
     register(module: Module | MultiModule): void {
 
+        if(this.getModule(module.name)) {
+            throw new Error(`Duplicate Module name : '${module.name}' already exist`);
+        }
+
         if(module instanceof MultiModule) {
             this.registerMod(module);
             for (const mod of module.subModules) {
                 mod.setParent(module.name)
                 if(mod instanceof MultiModule) {
-                    throw new Error(`A Multi Module "${module.name}" cannot have a Multi Module as a Module : ${mod.name}`);
+                    throw new Error(`The Multi Module "${module.name}" cannot have a Multi Module as a Module : ${mod.name}`);
                 }
                 this.registerMod(mod);
             }
