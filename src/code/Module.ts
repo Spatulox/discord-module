@@ -10,21 +10,35 @@ import {
 export type ModuleEventsMap = Partial<Record<keyof ClientEvents, (...args: any[]) => any>>;
 
 export abstract class Module     {
+    private _parent: string | "root" = "root";
     public abstract name: string;
     public abstract description: string;
     private _enabled = false;
 
     public abstract get events(): ModuleEventsMap;
 
-    public createModuleUI(): SectionBuilder {
-        if(`toggle_${this.name.toLowerCase()}`.length > 100){
+    public setParent(parent: string): void {
+        this._parent = parent;
+    };
+
+    public get parent(): string | "root" {
+        return this._parent
+    }
+
+    public createModuleUI(namePrefix?: string): SectionBuilder {
+        const namePrefixStr = namePrefix ? `${namePrefix}_` : '';
+        const name = `${namePrefixStr}toggle_${this.name.toLowerCase()}`;
+
+        if(name.length > 100){
             throw new Error(`In order to create the Module UI, buttons customId should not be more than 100 char, please reduce the name of your Module : ${this.name}`);
         }
         return new SectionBuilder()
             .addTextDisplayComponents(new TextDisplayBuilder().setContent(`## ${this.enabled ? "🟢" : "🔴"} ${this.name}`))
             .addTextDisplayComponents(new TextDisplayBuilder().setContent(`${this.description}`))
-            .setButtonAccessory(new ButtonBuilder().setLabel(this.enabled ? "Disabled" : "Enable").setCustomId(`toggle_${this.name.toLowerCase()}`).setStyle(this.enabled ? ButtonStyle.Danger : ButtonStyle.Success))
+            .setButtonAccessory(new ButtonBuilder().setLabel(this.enabled ? "Disabled" : "Enable").setCustomId(name).setStyle(this.enabled ? ButtonStyle.Danger : ButtonStyle.Success))
     }
+
+    
 
     public showModule(): InteractionReplyOptions {
         return {

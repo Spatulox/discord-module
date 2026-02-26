@@ -33,20 +33,21 @@ export class ModuleManager {
     register(module: Module | MultiModule): void {
 
         if(module instanceof MultiModule) {
-            this.registerMod("root", module);
+            this.registerMod(module);
             for (const mod of module.subModules) {
-                this.registerMod(module.name, mod);
+                mod.setParent(module.name)
+                this.registerMod(mod);
             }
             return
         }
-        this.registerMod("root", module);
+        this.registerMod(module);
     }
 
-    private registerMod(parentName: string | "root", module: Module): void {
-        if (!this._modules[parentName]) {
-            this._modules[parentName] = [];
+    private registerMod(module: Module): void {
+        if (!this._modules[module.parent]) {
+            this._modules[module.parent] = [];
         }
-        this._modules[parentName].push(module);
+        this._modules[module.parent]!.push(module);
         this.bindEvents(module);
     }
 
