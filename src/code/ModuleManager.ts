@@ -37,6 +37,9 @@ export class ModuleManager {
             this.registerMod(module);
             for (const mod of module.subModules) {
                 mod.setParent(module.name)
+                if(mod instanceof MultiModule) {
+                    throw new Error(`A Multi Module "${module.name}" cannot have a Multi Module as a Module : ${mod.name}`);
+                }
                 this.registerMod(mod);
             }
             return
@@ -142,7 +145,6 @@ export class ModuleManager {
             }
             const parentMod = manager.getModule(module.parent)
             if(!parentMod || !(parentMod instanceof MultiModule)){
-                console.log(module, parentMod)
                 if(!(module instanceof MultiModule) ){ // if it's a MultiModule, if the "all_toggle_${button}"
                     interaction.deferUpdate() // No Parent mod, so updateMainUI is the only one to be updated
                 }
@@ -153,4 +155,5 @@ export class ModuleManager {
         }
         console.error("No existing manager")
     }
+
 }

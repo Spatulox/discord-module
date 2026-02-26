@@ -38,8 +38,6 @@ export abstract class Module     {
             .setButtonAccessory(new ButtonBuilder().setLabel(this.enabled ? "Disabled" : "Enable").setCustomId(name).setStyle(this.enabled ? ButtonStyle.Danger : ButtonStyle.Success))
     }
 
-    
-
     public showModule(): InteractionReplyOptions {
         return {
             components: [new ContainerBuilder().addSectionComponents(this.createModuleUI())],
