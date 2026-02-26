@@ -1,4 +1,5 @@
 import {
+    ButtonInteraction,
     Client,
     ContainerBuilder, Message, MessageEditOptions,
     MessageFlags, SeparatorBuilder, SeparatorSpacingSize,
@@ -118,10 +119,38 @@ export class ModuleManager {
         throw new Error(`Channel (${channelID}) does not exist or is not a valid sendable channel`);
     }
 
-    async updateUI(): Promise<void> {
+    /**
+     * Global update for the main message
+     */
+    private async updateMainUI(): Promise<void> {
         const m: MessageEditOptions = {
             components: [this.createManagerUI()],
         }
         await ModuleManager.message?.edit(m)
+    }
+
+    /**
+     * This update the MultiModule component when a single module is updated
+     * @param interaction
+     * @param module
+     */
+    public updateMultiModuleUI(interaction: ButtonInteraction, module: Module): void {
+        const manager = ModuleManager.getInstance()
+        if(manager){
+            if(module.parent == "root"){ // It's the MainUI, which is updated every click right now
+                this.updateMainUI()
+            }
+            const parentMod = manager.getModule(module.parent)
+            if(!parentMod || !(parentMod instanceof MultiModule)){
+                console.log(module, parentMod)
+                if(!(module instanceof MultiModule) ){ // if it's a MultiModule, if the "all_toggle_${button}"
+                    interaction.deferUpdate() // No Parent mod, so updateMainUI is the only one to be updated
+                }
+                return
+            }
+            parentMod.notifyChange(interaction)
+            return
+        }
+        console.error("No existing manager")
     }
 }

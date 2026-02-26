@@ -24,23 +24,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
             const module = manager?.getModule(custID.split("toggle_")[1]!)
 
             if(module instanceof MultiModule){
-                console.log("MultiModule : ", module)
                 interaction.reply(module.showModule()) // This show all the modules inside the MultiModule.
             } else if (module instanceof Module){
-                console.log("Module : ", module)
-                interaction.deferUpdate()
                 module.toggle()
-                //module.updateMultiModuleUI(interaction)
-                //interaction.update({content: "coiucou"})
+                manager?.updateMultiModuleUI(interaction, module) // This update the MultiModule component when a module is updated
             }
         } else if(custID.startsWith("all_")){ // Only the "title" of an interaction of a MultiModule
             const module = manager?.getModule(custID.split("toggle_")[1]!)
-            if(module instanceof MultiModule){ // Should not be a simple Module because it works like that
+            if(module instanceof MultiModule){ // Should not be a simple Module, because button which begin with "all" are always "titles" of MultiModule Component
                 module.enabled ? await module.disableAll(interaction) : await module.enableAll(interaction)
+                manager?.updateMultiModuleUI(interaction, module)
             }
             console.log(module)
         }
-        manager?.updateUI() // Global message is updated click
+        //manager?.updateMainUI()
     }
 })
 
