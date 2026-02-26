@@ -7,12 +7,7 @@ import {Module, ModuleEventsMap} from "./Module";
 
 export abstract class MultiModule extends Module {
     private readonly manager;
-
-    protected abstract readonly subModules: Module[];
-
-    /*public get subModules(): Module[] {
-        return this._subModules;
-    };*/
+    public abstract readonly subModules: Module[];
 
     constructor() {
         super()

@@ -48,7 +48,7 @@ export abstract class Module     {
     }
 
     get enabled(): boolean {return this._enabled}
-    toogleEnabled() {this._enabled = !this._enabled}
+    toggle() {this._enabled = !this._enabled}
     enable() { this._enabled = true; }
     disable() { this._enabled = false; }
 };
