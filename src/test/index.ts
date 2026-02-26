@@ -30,10 +30,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 console.log("Module : ", module)
                 interaction.deferUpdate()
                 module.toggle()
-                // If we use the module.showModule(), this will only show the actual module, which is completely useless
+                //module.updateMultiModuleUI(interaction)
+                //interaction.update({content: "coiucou"})
             }
-            manager?.updateUI()
+        } else if(custID.startsWith("all_")){ // Only the "title" of an interaction of a MultiModule
+            const module = manager?.getModule(custID.split("toggle_")[1]!)
+            if(module instanceof MultiModule){ // Should not be a simple Module because it works like that
+                module.enabled ? await module.disableAll(interaction) : await module.enableAll(interaction)
+            }
+            console.log(module)
         }
+        manager?.updateUI() // Global message is updated click
     }
 })
 
