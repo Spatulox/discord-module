@@ -31,7 +31,7 @@ export abstract class MultiModule extends Module {
     protected createSubmoduleUI(){
         const container = new ContainerBuilder();
 
-        container.addSectionComponents(this.createModuleUI())
+        container.addSectionComponents(this.createModuleUI("all"))
 
         for (const module of this.subModules) {
             container.addSectionComponents(module.createModuleUI())
@@ -54,8 +54,10 @@ export abstract class MultiModule extends Module {
     }
 
     async enableAll(interaction?: ButtonInteraction) {
-        this.manager.enableAll();
-        this.notifyChange(interaction);
+        this.subModules.forEach(module => {
+            module.enable();
+        })
+        this.enable(interaction);
     }
 
     override disable(interaction?: ButtonInteraction) {
@@ -64,25 +66,21 @@ export abstract class MultiModule extends Module {
     }
 
     async disableAll(interaction?: ButtonInteraction) {
-        this.manager.disableAll();
-        this.notifyChange(interaction);
+        this.subModules.forEach(module => {
+            module.disable();
+        })
+        this.disable(interaction);
     }
 
-    private notifyChange(interaction?: ButtonInteraction) {
+    public notifyChange(interaction?: ButtonInteraction) {
         if (!interaction) return;
 
-        const flatModules = Object.values(this.manager.modules).flat();
-
         interaction.update({
-            embeds: [{
-                title: `${this.name} (${flatModules.filter(m => m.enabled).length}/${this.subModules.length})`,
-                color: this.isAnyEnabled() ? 0x00ff00 : 0xff0000
-            }],
             components: [this.createSubmoduleUI()]
         });
     }
 
-    private isAnyEnabled(): boolean {
+    public isAnyEnabled(): boolean {
         return Object.values(this.manager.modules).flat().some(m => m.enabled);
     }
 
