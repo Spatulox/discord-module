@@ -1,6 +1,6 @@
 import {Client, Events, Interaction} from "discord.js";
 
-enum InteractionType {
+export enum InteractionType {
     AUTOCOMPLETE = "AUTOCOMPLETE",
     BUTTON = "BUTTON",
     MESSAGE_CONTEXT_MENU = "MESSAGE_CONTEXT_MENU",
@@ -85,8 +85,8 @@ export class InteractionsManager {
         await handler(interaction);
     }
 
-    public register(type: InteractionType, interaction: { name: string; value: InteractionHandler }): boolean {
-        return this._register(type, {key: interaction.name, value: interaction.value})
+    public register(type: InteractionType, interaction: { name: string; func: InteractionHandler }): boolean {
+        return this._register(type, {key: interaction.name, value: interaction.func})
     }
 
     private createMap(name: string, func: (...args: any[]) => any): {key: string, value: InteractionHandler} {

@@ -1,4 +1,4 @@
-import {Events, Message} from "discord.js";
+import {ChatInputCommandInteraction, Events, Message} from "discord.js";
 import {Module, ModuleEventsMap} from "../index";
 
 export class PongModule extends Module {
@@ -23,6 +23,10 @@ export class PongModule extends Module {
 
     async handleMessageUpdate2(message: Message) {
         message.reply("Update 2 !")
+    }
+
+    static async ping_interaction(interaction: ChatInputCommandInteraction){
+        interaction.reply("Pong !")
     }
 
 }
