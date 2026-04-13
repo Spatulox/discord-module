@@ -14,8 +14,8 @@
     "pub:minor": "npm run minor && npm publish --access public",
     "pub:major": "npm run major && npm publish --access public"
   },
-  "dependencies": {
-    "discord.js": "^14.25.1"
+  "peerDependencies": {
+    "discord.js": "^14.26.0"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
