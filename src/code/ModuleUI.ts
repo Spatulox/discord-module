@@ -31,11 +31,13 @@ export class ModuleUI {
     private message: Message | null = null
     //private static message: Message | null = null;
     private targetedModuleName: string | "root" = "root"
-    private currentModule: string | "root" = "init"
+    private triggerDynamicPageRebuild: boolean = true;
     private readonly CACHE_DIR = ".dmcache";
     private readonly MAX_COMPONENT_PER_PAGE = 40
     private dynamicPage: DynamicPage = {}
     private pageIndex: number = 0
+    private breadcrumbTrail: string[] = ["Home"]
+    private breadcrumbTrailSet: Set<string> = new Set(this.breadcrumbTrail); // Avoid double thing, since sometime discord let user press the button two times...
 
     constructor(client: Client, channel_id: string) {
         this.client = client;
@@ -52,22 +54,73 @@ export class ModuleUI {
     }
 
     private async registerButtons(): Promise<void> {
-        console.log("Register buttons")
         const interactionManager = InteractionsManager.createOrGetInstance(this.client);
-        interactionManager.registerButton("dm_prev", (interaction: ButtonInteraction) => {
-            this.changePageIndex(interaction, this.pageIndex - 1)
-        })
-        interactionManager.registerButton("dm_next", (interaction: ButtonInteraction) => {
-            console.log("Eoué on passe içi")
-            this.changePageIndex(interaction, this.pageIndex + 1)
-        })
-        interactionManager.registerButton("dm_go_back", (_interaction: ButtonInteraction) => {})
-        interactionManager.registerButton("toggle_", (_interaction: ButtonInteraction) => {}, InteractionMatchType.START_WITH)
+        interactionManager.registerButton("dm_prev", (interaction: ButtonInteraction) => { this.changePageIndex(interaction, this.pageIndex - 1) })
+        interactionManager.registerButton("dm_next", (interaction: ButtonInteraction) => { this.changePageIndex(interaction, this.pageIndex + 1) })
+        interactionManager.registerButton("dm_go_back", (interaction: ButtonInteraction) => { this.goBack(interaction) })
+        interactionManager.registerButton("toggle_", (interaction: ButtonInteraction) => { this.toggleModule(interaction) }, InteractionMatchType.START_WITH)
+        interactionManager.registerButton("show_", (interaction: ButtonInteraction) => { this.showSubModule(interaction) }, InteractionMatchType.START_WITH)
+    }
+
+    private async goBack(interaction: ButtonInteraction) {
+        const mod = this.getTargetedModule()
+        if(mod == "root"){
+            return
+        }
+        this.triggerDynamicPageRebuild = true
+        this.targetedModuleName = mod.parent
+        this.breadcrumbTrail.pop()
+        this.breadcrumbTrailSet = new Set(this.breadcrumbTrail)
+        await this.updateUI()
+        interaction.deferUpdate()
+    }
+
+    private getModuleNameFromButtonId(interaction: ButtonInteraction, prefix: string){
+        const module_id_from_btn_id = interaction.customId.split(prefix)[1]
+        if(!module_id_from_btn_id){return}
+        if(!ModuleRegistry.getModule(module_id_from_btn_id)){
+            interaction.reply({
+                content: `This module does not exist : ${module_id_from_btn_id}`,
+                flags: MessageFlags.Ephemeral
+            })
+            return
+        }
+        return module_id_from_btn_id
+    }
+
+    private async toggleModule(interaction: ButtonInteraction) {
+        const module_id_from_btn_id = this.getModuleNameFromButtonId(interaction, "toggle_")
+        if(!module_id_from_btn_id) return
+        const mod = ModuleRegistry.getModule(module_id_from_btn_id)
+        if(mod){
+            mod.toggle()
+            this.triggerDynamicPageRebuild = true
+            await this.updateUI()
+        }
+        interaction.deferUpdate()
+    }
+
+    private async showSubModule(interaction: ButtonInteraction) {
+        const module_id_from_btn_id = this.getModuleNameFromButtonId(interaction, "show_")
+        if(!module_id_from_btn_id) return
+        this.triggerDynamicPageRebuild = true
+        this.targetedModuleName = module_id_from_btn_id
+
+        const mod = ModuleRegistry.getModule(module_id_from_btn_id)
+
+        const mod_str = mod != null ? mod.name : module_id_from_btn_id
+        if(this.breadcrumbTrailSet.has(mod_str)){
+            return
+        }
+        this.breadcrumbTrail.push(mod_str)
+        this.breadcrumbTrailSet = new Set(this.breadcrumbTrail)
+        this.pageIndex = 0
+        await this.updateUI()
+        interaction.deferUpdate()
     }
 
     private async changePageIndex(interaction: ButtonInteraction, newIndex: number) {
         this.pageIndex = newIndex;
-        console.log("Page index", this.pageIndex);
         await this.updateUI()
         interaction.deferUpdate()
     }
@@ -80,7 +133,7 @@ export class ModuleUI {
         const fileName = `discord-modules.cache.json`;
         const filePath = path.join(this.CACHE_DIR, fileName);
 
-        if (fs.existsSync(filePath)) {
+        if (fs.existsSync(filePath) && !message) {
             try {
                 const raw = fs.readFileSync(filePath, "utf-8");
                 const cache = JSON.parse(raw);
@@ -146,7 +199,8 @@ export class ModuleUI {
         const footer = this.createFooterbuttonRow() // Here it's used to determine the number of component
         const maxComponents = this.MAX_COMPONENT_PER_PAGE - this.countComponents([container, footer])
 
-        if(this.currentModule !== this.targetedModuleName) {
+        if(this.triggerDynamicPageRebuild) {
+            this.triggerDynamicPageRebuild = false
             // Header and Footer need to be determined before creating the dynamic main UI
             this.dynamicPage = this.createDynamicUI(container, multi, maxComponents)
         }
@@ -159,7 +213,6 @@ export class ModuleUI {
         for (const comp of page) {
             container.addSectionComponents(comp);
         }
-        this.currentModule = this.targetedModuleName
         return [container, newFooter]
     }
 
@@ -168,7 +221,9 @@ export class ModuleUI {
         container
             .addTextDisplayComponents(new TextDisplayBuilder().setContent(`# Module Manager`))
             .addTextDisplayComponents(new TextDisplayBuilder().setContent(`You can enable/disable any module`))
-            .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Large))
+            .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+            .addTextDisplayComponents(new TextDisplayBuilder().setContent(this.breadcrumbTrail.join(" > ")))
+            .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
     }
 
     //private createFooterContainer(container: ContainerBuilder){}
@@ -233,6 +288,10 @@ export class ModuleUI {
     }
 
     private async updateUI() {
+        if(!this.message){
+            console.error("Cannot update the targeted message : Unknown Message")
+            return
+        }
         this.message?.edit({
             components: this.createUI()
         })
@@ -252,7 +311,7 @@ export class ModuleUI {
                 components: this.createUI(),
                 flags: MessageFlags.IsComponentsV2
             })
-            this.initCache(message)
+            await this.initCache(message)
             return
         }
         throw new Error(`Channel (${this.channel_id}) does not exist or is not a valid sendable channel`);
