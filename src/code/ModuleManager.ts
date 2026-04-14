@@ -77,7 +77,7 @@ export class ModuleManager {
             for (const mod of module.subModules) {
                 mod.setParent(module.name)
                 if(mod instanceof MultiModule) {
-                    throw new Error(`The Multi Module "${module.name}" cannot have a Multi Module as a Module : ${mod.name}`);
+                    this.register(mod)
                 }
                 this.registerMod(mod);
             }
