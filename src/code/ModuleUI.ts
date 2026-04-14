@@ -1,9 +1,13 @@
 import {
-    ActionRowBuilder, ButtonBuilder,
+    ActionRowBuilder,
+    ButtonBuilder, ButtonInteraction,
     ButtonStyle,
     Client,
-    ContainerBuilder, Events, Message,
-    MessageFlags, SendableChannels,
+    ContainerBuilder,
+    Message,
+    MessageFlags,
+    SectionBuilder,
+    SendableChannels,
     SeparatorBuilder,
     SeparatorSpacingSize,
     TextDisplayBuilder
@@ -11,11 +15,12 @@ import {
 import {Module} from "./Module";
 import {MultiModule} from "./MultiModule";
 import {ModuleRegistry} from "./ModuleRegistry";
-import {InteractionsManager} from "./InteractionsManager";
+import {InteractionMatchType, InteractionsManager} from "./InteractionsManager";
 import * as fs from "node:fs";
 import path from "node:path";
 
 type TrucBidule = MultiModule | Module | "root"
+type DynamicPage = Record<number, SectionBuilder[]>
 
 export class ModuleUI {
 
@@ -25,32 +30,46 @@ export class ModuleUI {
     private channel: SendableChannels | null = null;
     private message: Message | null = null
     //private static message: Message | null = null;
-    private targetedModuleName: "root" = "root"
-    private page: number = 1;
+    private targetedModuleName: string | "root" = "root"
+    private currentModule: string | "root" = "init"
     private readonly CACHE_DIR = ".dmcache";
-    private MAX_COMPONENT_PER_PAGE = 40
-    private MAX_COMPONENT_PER_PAGE_BKP = 40
+    private readonly MAX_COMPONENT_PER_PAGE = 40
+    private dynamicPage: DynamicPage = {}
+    private pageIndex: number = 0
 
     constructor(client: Client, channel_id: string) {
         this.client = client;
         this.channel_id = channel_id;
         this.setup()
-        this.client.once(Events.ClientReady, () => {
-            const interactionManager = InteractionsManager.createInstance(client);
-            interactionManager.registerButton("dm_prev", this.next)
-            interactionManager.registerButton("dm_page", this.next)
-            interactionManager.registerButton("dm_next", this.next)
-        })
     }
 
     private async setup() {
         await this.initCache(null)
+        await this.registerButtons()
         await this.fetchChannel()
         await this.fetchMessageById();
         await this.sendUI()
     }
 
-    private next() {
+    private async registerButtons(): Promise<void> {
+        console.log("Register buttons")
+        const interactionManager = InteractionsManager.createOrGetInstance(this.client);
+        interactionManager.registerButton("dm_prev", (interaction: ButtonInteraction) => {
+            this.changePageIndex(interaction, this.pageIndex - 1)
+        })
+        interactionManager.registerButton("dm_next", (interaction: ButtonInteraction) => {
+            console.log("Eoué on passe içi")
+            this.changePageIndex(interaction, this.pageIndex + 1)
+        })
+        interactionManager.registerButton("dm_go_back", (_interaction: ButtonInteraction) => {})
+        interactionManager.registerButton("toggle_", (_interaction: ButtonInteraction) => {}, InteractionMatchType.START_WITH)
+    }
+
+    private async changePageIndex(interaction: ButtonInteraction, newIndex: number) {
+        this.pageIndex = newIndex;
+        console.log("Page index", this.pageIndex);
+        await this.updateUI()
+        interaction.deferUpdate()
     }
 
     private async initCache(message: Message | null): Promise<void> {
@@ -91,41 +110,57 @@ export class ModuleUI {
     }
 
     private async fetchChannel() {
-        const channel = await this.client.channels.fetch(this.channel_id);
+        try {
+            const channel = await this.client.channels.fetch(this.channel_id);
 
-        if (!channel || !channel?.isTextBased() || !channel?.isSendable()) {
-            throw new Error("Channel not found or not text-based");
+            if (!channel || !channel?.isTextBased() || !channel?.isSendable()) {
+                throw new Error("Channel not found or not text-based");
+            }
+            this.channel = channel
+        } catch (e) {
+            console.error(e)
         }
-        this.channel = channel
     }
 
     private async fetchMessageById(): Promise<void> {
-        if (!this.message_id) return
-        this.message = await this.channel?.messages.fetch(this.message_id) ?? null
+        try {
+            if (!this.message_id) return
+            this.message = await this.channel?.messages.fetch(this.message_id) ?? null
+        } catch (e) {
+            console.error(`The original message haven't been found, it may have been deleted : ${e}`)
+        }
     }
 
     private getTargetedModule(): TrucBidule {
         const mod = ModuleRegistry.getModule(this.targetedModuleName)
-        return mod ?? this.targetedModuleName
+        return mod ?? "root"
     }
 
-    private createUI(): (ContainerBuilder | ActionRowBuilder<ButtonBuilder>)[] {
+    private createUI(): (ContainerBuilder | ActionRowBuilder<ButtonBuilder>)[]{
         const multi = this.getTargetedModule()
         if (!multi) {
             throw new Error("Impossible to render the targeted Module : Module is not a MultiModule")
         }
         const container = new ContainerBuilder()
         this.createHeaderContainer(container)
-        const footer = this.createFooterbuttonRow()
-        this.MAX_COMPONENT_PER_PAGE = this.MAX_COMPONENT_PER_PAGE - this.countComponents([container.toJSON(), this.createFooterbuttonRow()])
+        const footer = this.createFooterbuttonRow() // Here it's used to determine the number of component
+        const maxComponents = this.MAX_COMPONENT_PER_PAGE - this.countComponents([container, footer])
 
-        // Header and Footer neeed to be determined before creating the dynamic main UI
-        this.createDynamicUI(container, multi)
+        if(this.currentModule !== this.targetedModuleName) {
+            // Header and Footer need to be determined before creating the dynamic main UI
+            this.dynamicPage = this.createDynamicUI(container, multi, maxComponents)
+        }
 
-        // Reset the MAX_COMPONENT_PER_PAGE private var
-        this.MAX_COMPONENT_PER_PAGE = this.MAX_COMPONENT_PER_PAGE_BKP
+        const newFooter = this.createFooterbuttonRow()
 
-        return [container, footer]
+        const page = this.dynamicPage[this.pageIndex];
+        if (!page) return [container, newFooter]
+
+        for (const comp of page) {
+            container.addSectionComponents(comp);
+        }
+        this.currentModule = this.targetedModuleName
+        return [container, newFooter]
     }
 
     // 4 components
@@ -138,54 +173,49 @@ export class ModuleUI {
 
     //private createFooterContainer(container: ContainerBuilder){}
     // 32 component max
-    private createDynamicUI(container: ContainerBuilder, multiMod: TrucBidule) {
-
-        let count = 0
+    private createDynamicUI(_container: ContainerBuilder, multiMod: TrucBidule, maxComponent: number): DynamicPage {
         if (multiMod instanceof MultiModule) {
-            for (const module of multiMod.subModules) {
-                const comp = module.createModuleUI()
-                container.addSectionComponents(comp);
-                count += this.countComponents([comp])
-                if(count >= this.MAX_COMPONENT_PER_PAGE){
-                    return
-                }
-            }
-            return
+            return this.buildDynamicPage(multiMod.subModules, maxComponent);
         }
 
-        const root = ModuleRegistry.getRoot() ?? []
-        for (const module of root) {
-            const comp = module.createModuleUI()
-            container.addSectionComponents(comp);
-            count += this.countComponents([comp])
-            if(count >= this.MAX_COMPONENT_PER_PAGE){
-                return
-            }
-        }
-
-        if (multiMod instanceof Module) {
-            container.addSectionComponents(multiMod.createModuleUI());
-            return
-        }
+        const root = ModuleRegistry.getRoot() ?? [];
+        return this.buildDynamicPage(root, maxComponent);
     }
 
     // 4 component
     private createFooterbuttonRow(): ActionRowBuilder<ButtonBuilder> {
         const action = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setLabel("Previous")
-                    .setStyle(ButtonStyle.Primary)
-                    .setCustomId("dm_prev"),
-                new ButtonBuilder()
-                    .setLabel(`Page ${this.page}/${this.page}`)
-                    .setStyle(ButtonStyle.Secondary)
-                    .setCustomId("dm_page"),
-                new ButtonBuilder()
-                    .setLabel("Next")
-                    .setStyle(ButtonStyle.Primary)
-                    .setCustomId("dm_next")
-            )
+
+        const numberPage = Object.keys(this.dynamicPage).length
+
+        action.addComponents(new ButtonBuilder()
+            .setLabel("Previous")
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId("dm_prev")
+            .setDisabled(this.pageIndex <= 0)
+        )
+
+        action.addComponents(new ButtonBuilder()
+            .setLabel(`Page ${this.pageIndex+1}/${numberPage}`)
+            .setStyle(ButtonStyle.Secondary)
+            .setCustomId("dm_page")
+            .setDisabled(true)
+        )
+
+        action.addComponents(new ButtonBuilder()
+            .setLabel("Next")
+            .setStyle(ButtonStyle.Primary)
+            .setCustomId("dm_next")
+            .setDisabled(this.pageIndex+1 >= numberPage)
+        )
+
+        action.addComponents(new ButtonBuilder()
+            .setLabel("Back")
+            .setStyle(ButtonStyle.Danger)
+            .setCustomId("dm_go_back")
+            .setDisabled(this.targetedModuleName === "root")
+        )
+
         return action
     }
 
@@ -229,16 +259,40 @@ export class ModuleUI {
     }
 
 
+    private buildDynamicPage(
+        modules: Module[],
+        maxComponent: number
+    ): DynamicPage {
+        const dynamicPage: DynamicPage = {};
+        let pageNumber = 0;
+        let components: SectionBuilder[] = [];
+        let count = 0;
 
+        /**
+         * For to avoid more than 40 component in a message, based on the number of component in header and footer
+         */
+        for (const module of modules) {
+            const comp = module.createModuleUI();
+            const compCount = this.countComponents([comp])
+            if (count + compCount >= maxComponent) {
+                dynamicPage[pageNumber] = components;
+                pageNumber++;
+                components = [];
+                count = 0;
+            }
+            components.push(comp);
+            count += compCount;
+        }
 
+        // reste éventuel
+        if (components.length > 0) {
+            dynamicPage[pageNumber] = components;
+        }
 
+        return dynamicPage;
+    }
 
-
-
-
-
-
-    private printAllComponents(components: any[], indent = ""): void {
+    /*private printAllComponents(components: any[], indent = ""): void {
         for (const c of components) {
             // Affiche le type et quelques infos simples
             let desc = `<unknown>`;
@@ -265,5 +319,5 @@ export class ModuleUI {
                 console.log(indent + "  " + desc);
             }
         }
-    }
+    }*/
 }
