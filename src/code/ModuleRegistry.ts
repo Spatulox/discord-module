@@ -1,4 +1,4 @@
-import {ModuleManager} from "./ModuleManager";
+import {ModuleManager, ModuleMap} from "./ModuleManager";
 import {Module} from "./Module";
 
 /**
@@ -12,8 +12,16 @@ export class ModuleRegistry {
         ModuleRegistry._manager = m;
     }
 
+    static getRoot(): Module[] | undefined {
+        return this._manager?.getRoot();
+    }
+
     static getModule(name: string): Module | undefined {
         return this._manager?.getModule(name);
+    }
+
+    static getModules(): ModuleMap | undefined {
+        return this._manager?.modules;
     }
 
     static get manager() : ModuleManager | null {
