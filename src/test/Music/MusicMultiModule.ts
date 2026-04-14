@@ -1,6 +1,7 @@
 import {MultiModule, Module} from "../../index";
 import {PlayModule} from "./PlayModule";
 import {VolumeModule} from "./VolumeModule";
+import {RandomModule7} from "../random/RandomModule7";
 
 export class MusicMultiModule extends MultiModule {
     name = "Music Multi Module";
@@ -9,5 +10,6 @@ export class MusicMultiModule extends MultiModule {
     public subModules: Module[] = [
         new PlayModule(),
         new VolumeModule(),
+        new RandomModule7()
     ];
 }
