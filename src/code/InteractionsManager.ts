@@ -46,9 +46,16 @@ export class InteractionsManager {
         this.initClient(this.client);
     }
 
-    public static createInstance(client: Client): InteractionsManager {
+    private static createInstance(client: Client): InteractionsManager {
         InteractionsManager.instance = new InteractionsManager(client);
         return InteractionsManager.instance;
+    }
+
+    public static createOrGetInstance(client: Client): InteractionsManager {
+        if(this.instance) {
+            return this.instance;
+        }
+        return this.createInstance(client);
     }
 
     private initClient(client: Client) {

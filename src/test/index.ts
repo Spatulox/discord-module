@@ -18,8 +18,8 @@ const client = new Client({
 });
 
 client.once(Events.ClientReady, () => {
-    const manager = ModuleManager.createInstance(client);
-    const interactionManager = InteractionsManager.createInstance(client);
+    const manager = ModuleManager.createOrGetInstance(client);
+    const interactionManager = InteractionsManager.createOrGetInstance(client);
     manager.register(new MusicMultiModule())
     manager.register(new PongModule());
     manager.enableAll();

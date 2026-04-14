@@ -1,6 +1,9 @@
 # Changelog
 Date format : dd/mm/yyy
 
+### 14/04/2026 - 0.4.1
+- Singleton class now have a getOrCreateInstance() instead of a createInstance()
+
 ### 13/04/2026 - 0.4.0
 - Introduce a ModuleRegistry to get Module instance
 

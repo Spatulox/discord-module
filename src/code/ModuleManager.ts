@@ -21,11 +21,18 @@ export class ModuleManager {
         this.client = client;
     }
 
-    public static createInstance(client: Client): ModuleManager {
+    private static createInstance(client: Client): ModuleManager {
         ModuleManager.instance = new ModuleManager(client);
         ModuleRegistry.setModuleManager(ModuleManager.instance);
         this.initClient(client);
         return ModuleManager.instance;
+    }
+
+    public static createOrGetInstance(client: Client): ModuleManager {
+        if(this.instance) {
+            return this.instance;
+        }
+        return this.createInstance(client);
     }
 
     private static initClient(client: Client) {
