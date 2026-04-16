@@ -1,7 +1,10 @@
 # Changelog
 Date format : dd/mm/yyy
 
-### 14/04/2026 - 0.5.0
+### 14/04/2026 - 0.5.2
+- Fix : MultiModule should no longer be register two times
+
+### 14/04/2026 - 0.5.1
 - Major update to the UI when showing modules
   - Authorize MultiModule inside MultiModules
   - UI now have a pagination system
