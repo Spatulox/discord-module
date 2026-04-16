@@ -40,7 +40,7 @@ client.once(Events.ClientReady, () => {
     manager.enableAll();
     //manager.sendUIToChannel("1162047096220827831")
 
-    new ModuleUI(client, "1162050146444521593");
+    new ModuleUI(client, "1358126244633383227");
 
     interactionManager.registerSlash("ping", PongModule.ping_interaction)
     interactionManager.registerButton("btn_", BtnModuleTest.test, InteractionMatchType.START_WITH)
