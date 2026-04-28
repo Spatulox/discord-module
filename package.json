@@ -43,5 +43,8 @@
     "modules"
   ],
   "author": "Spatulox",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@spatulox/utils": "^0.1.1"
+  }
 }
