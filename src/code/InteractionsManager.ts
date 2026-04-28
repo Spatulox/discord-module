@@ -84,7 +84,7 @@ export class InteractionsManager {
         }
         if(interaction.isMessageComponent()){
             if (interaction.isButton()) return { type: InteractionType.BUTTON, identifier: interaction.customId };
-            if (interaction.isStringSelectMenu()) return { type: InteractionType.SELECT_MENU, identifier: interaction.customId };
+            if (interaction.isAnySelectMenu()) return { type: InteractionType.SELECT_MENU, identifier: interaction.customId };
             return undefined
         }
         if (interaction.isModalSubmit()) return { type: InteractionType.MODAL, identifier: interaction.customId };
