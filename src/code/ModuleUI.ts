@@ -16,8 +16,7 @@ import {Module} from "./Module";
 import {MultiModule} from "./MultiModule";
 import {ModuleRegistry} from "./ModuleRegistry";
 import {InteractionMatchType, InteractionsManager} from "./InteractionsManager";
-import * as fs from "node:fs";
-import path from "node:path";
+import {CacheManager} from "@spatulox/utils";
 
 type TrucBidule = MultiModule | Module | "root"
 type DynamicPage = Record<number, SectionBuilder[]>
@@ -25,14 +24,15 @@ type DynamicPage = Record<number, SectionBuilder[]>
 export class ModuleUI {
 
     private client: Client;
-    private channel_id: string;
-    private message_id: string | null = null;
+
+    private cacheName: string = "discord-modules.cache"
+    private cacheData: {channel_id: string, message_id: string} = {channel_id: "", message_id: ""}
+
     private channel: SendableChannels | null = null;
     private message: Message | null = null
     //private static message: Message | null = null;
     private targetedModuleName: string | "root" = "root"
     private triggerDynamicPageRebuild: boolean = true;
-    private readonly CACHE_DIR = ".dmcache";
     private readonly MAX_COMPONENT_PER_PAGE = 40
     private dynamicPage: DynamicPage = {}
     private pageIndex: number = 0
@@ -41,7 +41,7 @@ export class ModuleUI {
 
     constructor(client: Client, channel_id: string) {
         this.client = client;
-        this.channel_id = channel_id;
+        this.cacheData.channel_id = channel_id
         this.setup()
     }
 
@@ -126,45 +126,33 @@ export class ModuleUI {
     }
 
     private async initCache(message: Message | null): Promise<void> {
-        if (!fs.existsSync(this.CACHE_DIR)) {
-            fs.mkdirSync(this.CACHE_DIR, {recursive: true});
-        }
 
-        const fileName = `discord-modules.cache.json`;
-        const filePath = path.join(this.CACHE_DIR, fileName);
+        if(message != null){
+            const data: typeof this.cacheData = {
+                channel_id: message?.channelId ?? this.cacheData.channel_id,
+                message_id: message?.id ?? this.cacheData.message_id
+            }
 
-        if (fs.existsSync(filePath) && !message) {
-            try {
-                const raw = fs.readFileSync(filePath, "utf-8");
-                const cache = JSON.parse(raw);
-
-                if (
-                    typeof cache === "object" &&
-                    cache.channel_id === this.channel_id &&
-                    typeof cache.message_id === "string"
-                ) {
-                    this.message_id = cache.message_id
-                    return
-                }
-            } catch (err) {
-                console.log(err)
+            if(!await CacheManager.writeCache(this.cacheName, data)){
+                console.error("Impossible to write the cache :/")
                 return
             }
         }
 
-        const cacheData = {
-            channel_id: this.channel_id,
-            message_id: message?.id ?? this.message?.id ?? null
-        };
-        this.message = message
-        this.message_id = message?.id ?? null
+        const cache = await CacheManager.getOrCreateCache(this.cacheName, this.cacheData)
 
-        fs.writeFileSync(filePath, JSON.stringify(cacheData, null, 2));
+        if(!cache){
+            console.error("Impossible to get/create the cache :/")
+            return
+        }
+
+        this.cacheData.channel_id = cache.channel_id
+        this.cacheData.message_id = cache.message_id
     }
 
     private async fetchChannel() {
         try {
-            const channel = await this.client.channels.fetch(this.channel_id);
+            const channel = await this.client.channels.fetch(this.cacheData.channel_id);
 
             if (!channel || !channel?.isTextBased() || !channel?.isSendable()) {
                 throw new Error("Channel not found or not text-based");
@@ -177,8 +165,8 @@ export class ModuleUI {
 
     private async fetchMessageById(): Promise<void> {
         try {
-            if (!this.message_id) return
-            this.message = await this.channel?.messages.fetch(this.message_id) ?? null
+            if (!this.cacheData.message_id) return
+            this.message = await this.channel?.messages.fetch(this.cacheData.message_id) ?? null
         } catch (e) {
             console.error(`The original message haven't been found, it may have been deleted : ${e}`)
         }
@@ -314,7 +302,7 @@ export class ModuleUI {
             await this.initCache(message)
             return
         }
-        throw new Error(`Channel (${this.channel_id}) does not exist or is not a valid sendable channel`);
+        throw new Error(`Channel (${this.cacheData.channel_id}) does not exist or is not a valid sendable channel`);
     }
 
 
